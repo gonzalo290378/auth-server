@@ -16,6 +16,6 @@ public class UserService {
     public User findByUsername(String username) {
         HashMap<String, String> uriPathVariable = new HashMap<>();
         uriPathVariable.put("username", username);
-        return restTemplate.getForObject("http://localhost:8090/ms-users/api/v1/users/{username}", User.class, uriPathVariable);
+        return restTemplate.getForObject("http://localhost:8090/ms-users/api/v1/users/username/{username}", User.class, uriPathVariable);
     }
 }

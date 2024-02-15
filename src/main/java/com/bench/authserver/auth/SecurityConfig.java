@@ -1,21 +1,30 @@
 package com.bench.authserver.auth;
 
+import com.bench.authserver.services.UserOauth;
+import com.bench.authserver.services.UserService;
+import com.bench.users.commons.model.User;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -28,68 +37,60 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
-
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
 @Slf4j
 public class SecurityConfig {
 
-//    @Autowired
-//    private UserService userService;
-//
-//    @Bean
-//    UserDetailsService userDetailsService() {
-//        return username -> {
-//            User user = userService.findByUsername(username);
-//            if (user == null) {
-//                throw new UsernameNotFoundException("User " + username + " does not exists");
-//            }
-//            List<GrantedAuthority> authorities = user.getRoles()
-//                    .stream()
-//                    .map(rol -> new SimpleGrantedAuthority(rol.getName()))
-//                    .peek(authority -> log.info("rol: " + authority.getAuthority()))
-//                    .collect(Collectors.toList());
-//
-//            log.info("username: " + username + "----------------------------------");
-//            return new UserOauth(user.getUsername(), user.getPassword(),
-//                    false, true, true, true, authorities);
-//        };
-//    }
+    @Autowired
+    private UserService userService;
 
     @Bean
-    public UserDetailsService userDetailsManager() {
-        UserDetails susan = User.builder()
-                .username("susan")
-                .password("{noop}12345")
-                .roles("USER")
-                .build();
-        return new InMemoryUserDetailsManager(susan);
+    UserDetailsService userDetailsService() {
+        return username -> {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                throw new UsernameNotFoundException("User " + username + " does not exists");
+            }
+            List<GrantedAuthority> authorities = user.getRoles()
+                    .stream()
+                    .map(rol -> new SimpleGrantedAuthority(rol.getName()))
+                    .peek(authority -> log.info("Username: ".concat(username).concat(" ").concat("rol: " + authority.getAuthority())))
+                    .collect(Collectors.toList());
+            return new UserOauth(user.getUsername(), user.getPassword(),
+                    true, true, true, true, authorities);
+        };
     }
 
-//    @Bean
-//    public UserDetailsService userDetailsManager() {
-//        InMemoryUserDetailsManager userDetailsManager = new InMemoryUserDetailsManager();
-//        UserDetails user = User.withUsername("susan")
-//                .password(passwordEncoder().encode("12345")).authorities("read")
-//                .build();
-//        userDetailsManager.createUser(user);
-//        return userDetailsManager;
-//    }
 
-    BCryptPasswordEncoder passwordEncoder() {
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+
+    }
+
+    @Bean
+    public AuthenticationProvider authenticationProvider(){
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService());
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 
     @Bean
     @Order(1)
