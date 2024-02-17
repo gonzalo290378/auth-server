@@ -37,6 +37,7 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -44,6 +45,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -65,7 +67,7 @@ public class SecurityConfig {
             }
             List<GrantedAuthority> authorities = user.getRoles()
                     .stream()
-                    .map(rol -> new SimpleGrantedAuthority(rol.getName()))
+                    .map(rol ->  new SimpleGrantedAuthority("ROLE_" + rol.getName()))
                     .peek(authority -> log.info("Username: ".concat(username).concat(" ").concat("rol: " + authority.getAuthority())))
                     .collect(Collectors.toList());
             return new UserOauth(user.getUsername(), user.getPassword(),
@@ -77,7 +79,6 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
-
     }
 
     @Bean
@@ -144,6 +145,9 @@ public class SecurityConfig {
                 .postLogoutRedirectUri("http://127.0.0.1:9000/logout")
                 .scope("read")
                 .scope("write")
+                .tokenSettings(TokenSettings.builder()
+                        .accessTokenTimeToLive(Duration.ofMinutes(2)) // Set the desired token expiration time here
+                        .build())
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
                 .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
