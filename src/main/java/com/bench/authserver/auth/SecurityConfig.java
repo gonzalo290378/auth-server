@@ -168,7 +168,7 @@ public class SecurityConfig {
                 .scope("read")
                 .scope("write")
                 .tokenSettings(TokenSettings.builder()
-                        .accessTokenTimeToLive(Duration.ofMinutes(2)) // Set the desired token expiration time here
+                        .accessTokenTimeToLive(Duration.ofMinutes(5)) // Set the desired token expiration time here
                         .build())
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
