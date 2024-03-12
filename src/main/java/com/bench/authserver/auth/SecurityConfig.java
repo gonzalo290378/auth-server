@@ -65,6 +65,8 @@ public class SecurityConfig {
     @Autowired
     private UserService userService;
 
+    //Orden ejecucion ms: ConfigServer, Eureka, AuthServer, MsUsers, MsAccounts, MsPayments, MsQueue, ApiGateway
+
     @Bean
     UserDetailsService userDetailsService() {
         return username -> {
